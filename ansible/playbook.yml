@@ -1,0 +1,4 @@
+- name: Deploy and Configure Vault
+  hosts: localhost
+  roles:
+    - vault

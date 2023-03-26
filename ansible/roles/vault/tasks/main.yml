@@ -1,0 +1,22 @@
+---
+- name: Create tempfile to Store Values File
+  ansible.builtin.tempfile:
+    state: directory
+  register: tempfile
+
+- name: Copy Values File
+  ansible.builtin.copy:
+    dest: "{{ tempfile.path }}/vault_values.yaml"
+    src: "../../../helm/vault/values.yaml"
+    mode: "0755"
+
+- name: Deploy Vault
+  kubernetes.core.helm:
+    release_name: vault
+    release_namespace: sonarqube-casc
+    chart_ref: hashicorp/vault
+    chart_version: "{{ vault_chart_version }}"
+    kubeconfig: "{{ kubeconfig_path }}"
+    create_namespace: true
+    values_files:
+      - "{{ tempfile.path }}/vault_values.yaml"

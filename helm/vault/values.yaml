@@ -1,0 +1,20 @@
+server:
+  extraSecretEnvironmentVars:
+    - envName: AZURE_TENANT_ID
+      secretName: vault
+      secretKey: AZURE_TENANT_ID
+    - envName: AZURE_CLIENT_ID
+      secretName: vault
+      secretKey: AZURE_CLIENT_ID
+    - envName: AZURE_CLIENT_SECRET
+      secretName: vault
+      secretKey: AZURE_CLIENT_SECRET
+    - envName: VAULT_AZUREKEYVAULT_VAULT_NAME
+      secretName: vault
+      secretKey: VAULT_AZUREKEYVAULT_VAULT_NAME
+    - envName: VAULT_AZUREKEYVAULT_KEY_NAME
+      secretName: vault
+      secretKey: VAULT_AZUREKEYVAULT_KEY_NAME
+    - envName: VAULT_SEAL_TYPE
+      secretName: vault
+      secretKey: VAULT_SEAL_TYPE
