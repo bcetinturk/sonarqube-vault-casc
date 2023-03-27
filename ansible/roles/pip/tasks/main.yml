@@ -1,0 +1,5 @@
+---
+- name: Install Kubernetes Package
+  ansible.builtin.pip:
+    name:
+      - kubernetes==26.1.0

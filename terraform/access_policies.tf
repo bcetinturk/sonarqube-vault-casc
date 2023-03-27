@@ -8,5 +8,7 @@ resource "azurerm_key_vault_access_policy" "kvap_vault" {
     "List",
     "Create",
     "GetRotationPolicy",
+    "UnwrapKey",
+    "WrapKey",
   ]
 }

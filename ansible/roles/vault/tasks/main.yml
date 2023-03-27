@@ -1,4 +1,29 @@
 ---
+- name: Create Namespace
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: namespace
+      metadata:
+        name: "{{ kubernetes_namespace }}"
+
+- name: Create Secret Object for Vault
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      data:
+        AZURE_CLIENT_ID: "{{ AZURE_CLIENT_ID | b64encode }}"
+        AZURE_CLIENT_SECRET: "{{ AZURE_CLIENT_SECRET | b64encode }}"
+        AZURE_TENANT_ID: "{{ AZURE_TENANT_ID | b64encode }}"
+        VAULT_AZUREKEYVAULT_KEY_NAME: "{{ VAULT_AZUREKEYVAULT_KEY_NAME | b64encode }}"
+        VAULT_AZUREKEYVAULT_VAULT_NAME: "{{ VAULT_AZUREKEYVAULT_VAULT_NAME | b64encode }}"
+        VAULT_SEAL_TYPE: "{{ VAULT_SEAL_TYPE | b64encode }}"
+      kind: Secret
+      metadata:
+        name: vault
+        namespace: sonarqube-casc
+      type: Opaque
+
 - name: Create tempfile to Store Values File
   ansible.builtin.tempfile:
     state: directory
@@ -12,11 +37,41 @@
 
 - name: Deploy Vault
   kubernetes.core.helm:
+    # state: absent
     release_name: vault
     release_namespace: sonarqube-casc
     chart_ref: hashicorp/vault
     chart_version: "{{ vault_chart_version }}"
     kubeconfig: "{{ kubeconfig_path }}"
-    create_namespace: true
     values_files:
       - "{{ tempfile.path }}/vault_values.yaml"
+
+# TODO: wait until pod is in running state
+# TODO: Skip this task if post-init-vars exists
+- name: Initialize Vault
+  kubernetes.core.k8s_exec:
+    namespace: "{{ kubernetes_namespace }}"
+    pod: vault-0
+    command: vault operator init
+  register: command_status
+
+- name: Print command_status
+  ansible.builtin.debug:
+    var: command_status
+
+- name: Create Post Init Secrets
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      data:
+        RECOVERY_KEY_1: "{{ command_status.stdout_lines[0] | b64encode }}"
+        RECOVERY_KEY_2: "{{ command_status.stdout_lines[1] | b64encode }}"
+        RECOVERY_KEY_3: "{{ command_status.stdout_lines[2] | b64encode }}"
+        RECOVERY_KEY_4: "{{ command_status.stdout_lines[3] | b64encode }}"
+        RECOVERY_KEY_5: "{{ command_status.stdout_lines[4] | b64encode }}"
+        INITIAL_ROOT_TEOKEN: "{{ command_status.stdout_lines[6] | b64encode }}"
+      kind: Secret
+      metadata:
+        name: post-init-vars
+        namespace: sonarqube-casc
+      type: Opaque

@@ -1,3 +1,4 @@
 ---
 kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
 vault_chart_version: "0.23.0"
+kubernetes_namespace: "sonarqube-casc"

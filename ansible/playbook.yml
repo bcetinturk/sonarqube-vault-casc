@@ -1,4 +1,7 @@
 - name: Deploy and Configure Vault
   hosts: localhost
+  vars_files:
+    - vars.yml
   roles:
+    - pip
     - vault
