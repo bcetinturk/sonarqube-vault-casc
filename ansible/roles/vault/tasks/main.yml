@@ -46,32 +46,58 @@
     values_files:
       - "{{ tempfile.path }}/vault_values.yaml"
 
-# TODO: wait until pod is in running state
-# TODO: Skip this task if post-init-vars exists
-- name: Initialize Vault
-  kubernetes.core.k8s_exec:
+- name: Wait Until Pod Info is Available
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Wait Until Pod is Ready
+  retries: 12
+  delay: 5
+  until: lookup('ansible.builtin.dict', pod.resources[0].status.containerStatuses[0].state).key == 'running'
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    name: vault-0
     namespace: "{{ kubernetes_namespace }}"
-    pod: vault-0
-    command: vault operator init
-  register: command_status
+  register: pod
 
-- name: Print command_status
-  ansible.builtin.debug:
-    var: command_status
+- name: Get post-init-vars
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: post-init-vars
+    namespace: "{{ kubernetes_namespace }}"
+  register: post_init_secret
 
-- name: Create Post Init Secrets
-  kubernetes.core.k8s:
-    definition:
-      apiVersion: v1
-      data:
-        RECOVERY_KEY_1: "{{ command_status.stdout_lines[0] | b64encode }}"
-        RECOVERY_KEY_2: "{{ command_status.stdout_lines[1] | b64encode }}"
-        RECOVERY_KEY_3: "{{ command_status.stdout_lines[2] | b64encode }}"
-        RECOVERY_KEY_4: "{{ command_status.stdout_lines[3] | b64encode }}"
-        RECOVERY_KEY_5: "{{ command_status.stdout_lines[4] | b64encode }}"
-        INITIAL_ROOT_TEOKEN: "{{ command_status.stdout_lines[6] | b64encode }}"
-      kind: Secret
-      metadata:
-        name: post-init-vars
-        namespace: sonarqube-casc
-      type: Opaque
+- name: Vault Initialization Block
+  when: post_init_secret.resources | length != 1
+  block:
+    # TODO: wait until pod is in running state
+    # TODO: Skip this task if post-init-vars exists
+    - name: Initialize Vault
+      kubernetes.core.k8s_exec:
+        namespace: "{{ kubernetes_namespace }}"
+        pod: vault-0
+        command: vault operator init
+      register: command_status
+
+    - name: Print command_status
+      ansible.builtin.debug:
+        var: command_status
+
+    - name: Create Post Init Secrets
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          data:
+            RECOVERY_KEY_1: "{{ command_status.stdout_lines[0] | b64encode }}"
+            RECOVERY_KEY_2: "{{ command_status.stdout_lines[1] | b64encode }}"
+            RECOVERY_KEY_3: "{{ command_status.stdout_lines[2] | b64encode }}"
+            RECOVERY_KEY_4: "{{ command_status.stdout_lines[3] | b64encode }}"
+            RECOVERY_KEY_5: "{{ command_status.stdout_lines[4] | b64encode }}"
+            INITIAL_ROOT_TEOKEN: "{{ command_status.stdout_lines[6] | b64encode }}"
+          kind: Secret
+          metadata:
+            name: post-init-vars
+            namespace: sonarqube-casc
+          type: Opaque
