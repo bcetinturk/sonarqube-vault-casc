@@ -72,8 +72,6 @@
 - name: Vault Initialization Block
   when: post_init_secret.resources | length != 1
   block:
-    # TODO: wait until pod is in running state
-    # TODO: Skip this task if post-init-vars exists
     - name: Initialize Vault
       kubernetes.core.k8s_exec:
         namespace: "{{ kubernetes_namespace }}"
