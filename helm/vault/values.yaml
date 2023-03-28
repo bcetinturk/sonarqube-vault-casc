@@ -18,3 +18,7 @@ server:
     - envName: VAULT_SEAL_TYPE
       secretName: vault
       secretKey: VAULT_SEAL_TYPE
+
+ui:
+  enabled: true
+  serviceType: LoadBalancer
