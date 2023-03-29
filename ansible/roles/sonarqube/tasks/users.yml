@@ -1,0 +1,63 @@
+---
+- name: Change Password for Admin
+  when: sonarqube.change_admin_password
+  ansible.builtin.uri:
+    url: http://{{ sonarqube.host }}/api/users/change_password
+    user: admin
+    password: "{{ sonarqube.old_admin_password }}"
+    method: POST
+    force_basic_auth: true
+    body_format: form-urlencoded
+    status_code:
+      - 204
+    body:
+      login: admin
+      password: "{{ sonarqube.admin_password }}"
+      previousPassword: "{{ sonarqube.old_admin_password }}"
+
+- name: Create a User for Scanning
+  ansible.builtin.uri:
+    url: http://{{ sonarqube.host }}/api/users/create
+    user: admin
+    password: "{{ sonarqube.admin_password }}"
+    method: POST
+    force_basic_auth: true
+    body_format: form-urlencoded
+    status_code:
+      - 200 # When user is created
+      - 400 # When token already exists
+    body:
+      login: analyzer
+      name: Analyzer
+      password: "{{ sonarqube.analyzer_password }}"
+
+- name: Create a Token for Analyzer User
+  ansible.builtin.uri:
+    url: http://{{ sonarqube.host }}/api/user_tokens/generate
+    user: admin
+    password: "{{ sonarqube.admin_password }}"
+    method: POST
+    force_basic_auth: true
+    body_format: form-urlencoded
+    status_code:
+      - 200 # When token is created
+      - 400 # When token already exists
+    body:
+      login: analyzer
+      name: analyzer_token
+      password: "{{ sonarqube.analyzer_password }}"
+  register: response
+
+- name: Print Token
+  when: response.status == 200
+  ansible.builtin.debug:
+    msg: "{{ response.json.token }}"
+
+- name: Add Analyzer token to Vault
+  when: response.status == 200
+  community.hashi_vault.vault_write:
+    url: http://{{ vault.host }}
+    token: "{{ vault.token }}"
+    path: "{{ vault.sonarqube_analyze_path }}"
+    data:
+      ANALYZER_TOKEN: "{{ response.json.token }}"

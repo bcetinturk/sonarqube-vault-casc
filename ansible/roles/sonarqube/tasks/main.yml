@@ -1,0 +1,37 @@
+---
+- name: Get Secrets From Vault
+  ansible.builtin.set_fact:
+    # Get token and url from vars
+    sonarqube_secrets: "{{ lookup('hashi_vault', 'secret=' + vault.path + ' token=' + vault.token + ' url=http://' + vault.host) }}"
+
+- name: Debug
+  ansible.builtin.debug:
+    msg: "{{ sonarqube_secrets }}"
+
+- name: Create Directory for values.yaml
+  ansible.builtin.file:
+    path: /tmp/sonarqube
+    state: directory
+    mode: "0755"
+
+- name: Render values.yaml
+  ansible.builtin.template:
+    dest: /tmp/sonarqube/values.yaml
+    src: "../../../helm/sonarqube/values.yaml.j2"
+    mode: "0644"
+
+- name: Deploy Sonarqube
+  kubernetes.core.helm:
+    # state: absent
+    release_name: sonarqube
+    release_namespace: sonarqube-casc
+    chart_ref: sonarqube/sonarqube
+    chart_version: "{{ sonarqube_chart_version }}"
+    # chart_repo_url: https://SonarSource.github.io/helm-chart-sonarqube
+    kubeconfig: "{{ kubeconfig_path }}"
+    values_files:
+      - "/tmp/sonarqube/values.yaml"
+
+- name: Configure Users
+  ansible.builtin.include_tasks:
+    file: users.yml

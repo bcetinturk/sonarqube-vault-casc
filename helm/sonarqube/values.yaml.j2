@@ -1,0 +1,24 @@
+ingress:
+  enabled: true
+  hosts:
+    - name: "{{ sonarqube.host }}"
+      path: /
+  ingressClassName: nginx
+
+sonarProperties:
+  # General LDAP Configuration
+  sonar.security.realm: LDAP
+  ldap.url: "{{ sonarqube_secrets.LDAP_URL }}"
+  ldap.bindDn: "{{ sonarqube_secrets.BIND_DN }}"
+  ldap.bindPassword: "{{ sonarqube_secrets.BIND_PASSWORD }}"
+
+  # LDAP User Mapping
+  ldap.user.baseDn: "{{ sonarqube_secrets.USER_BASE_DN }}"
+  ldap.user.request: "(&(objectClass=user)(sAMAccountName={login}))"
+  ldap.user.realNameAttribute: sAMAccountName
+  ldap.user.emailAttribute: email
+
+  # LDAP Group Mapping
+  ldap.group.baseDn: "{{ sonarqube_secrets.GROUP_BASE_DN }}"
+  ldap.group.request: "(&(objectClass=group)(member={dn}))"
+  ldap.group.idAttribute: "cn"

@@ -1,0 +1,4 @@
+---
+kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
+sonarqube_chart_version: "8.0.0+463"
+kubernetes_namespace: "sonarqube-casc"

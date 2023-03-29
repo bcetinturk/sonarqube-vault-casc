@@ -1,0 +1,8 @@
+---
+- name: Install and Configure Sonarqube
+  hosts: localhost
+  vars_files:
+    - sonarqube_vars.yml
+  roles:
+    - pip
+    - sonarqube
